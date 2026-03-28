@@ -2,27 +2,214 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import { v4 as uuidv4 } from "uuid"; // npm install uuid
 import { useParams } from "react-router-dom"; // for nurse link route
+import logo from "./logo.png";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import { useNavigate } from "react-router-dom";
+
+
 
 export default function App() {
   // ------------------- HOOKS -------------------
   const [screen, setScreen] = useState("dashboard");
   const [forms, setForms] = useState([]);
   const [currentForm, setCurrentForm] = useState(null);
+  // Add these hooks at the top
+const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+const navigate = useNavigate();
+
+const downloadPDF = () => {
+  const element = document.getElementById("pdf-content");
+  const pdf = new jsPDF("p", "mm", "a4");
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 10;
+
+  const headerHeight = 30; // reserve space for header
+  const footerHeight = 30; // reserve space for footer
+  const contentHeight = pageHeight - headerHeight - footerHeight;
+
+  
+  html2canvas(element, { 
+  scale: 2,
+  backgroundColor: null // 🔥 allows transparency
+}).then(async (canvas) => {
+    const imgProps = pdf.getImageProperties(canvas.toDataURL("image/png"));
+    const pdfWidth = pageWidth - margin * 2;
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+    let heightLeft = pdfHeight;
+    let offsetY = 0;
+
+    while (heightLeft > 0) {
+     // --- HEADER ---
+
+// Logo (left side)
+pdf.addImage(logo, "PNG", margin, 5, 30, 20); // slightly taller for balance
+
+// Text next to logo
+pdf.setFont("times", "italic", "bold"); // serif + italic
+pdf.setFontSize(20);
+pdf.setTextColor(11, 34, 66); // #0B2242
+pdf.text("Nachi Medical Solutions (Pty) Ltd", margin + 40, 12);
+
+pdf.setFontSize(11);
+pdf.text("Practice number Registered Nurse ND Kutama 1274872", margin + 40, 18);
+
+// Divider line under header
+pdf.setDrawColor(0);
+pdf.setLineWidth(0.5);
+pdf.line(margin, 25, pageWidth - margin, 25);
+
+// --- WATERMARK ---
+const wmWidth = pageWidth / 2;   // scale dynamically
+const wmHeight = wmWidth;        // keep square
+// --- CREATE FADED WATERMARK ONCE ---
+const watermarkCanvas = document.createElement("canvas");
+const ctx = watermarkCanvas.getContext("2d");
+
+const img = new Image();
+img.src = logo;
+
+await new Promise((resolve) => (img.onload = resolve));
+
+watermarkCanvas.width = img.width;
+watermarkCanvas.height = img.height;
+
+// 🔥 control opacity here
+ctx.globalAlpha = 0.15; 
+ctx.drawImage(img, 0, 0);
+
+const fadedLogo = watermarkCanvas.toDataURL("image/png");
+pdf.addImage(fadedLogo, "PNG", pageWidth / 2 - 60, pageHeight / 2 - 60, 120, 120);
+
+      // --- CONTENT SLICE ---
+      const pageCanvas = document.createElement("canvas");
+      const pageCtx = pageCanvas.getContext("2d");
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = (contentHeight * canvas.width) / pdfWidth;
+
+      pageCtx.drawImage(
+        canvas,
+        0, offsetY, canvas.width, pageCanvas.height, // source slice
+        0, 0, canvas.width, pageCanvas.height        // destination
+      );
+
+      const imgData = pageCanvas.toDataURL("image/png");
+      const sliceHeight = (pageCanvas.height * pdfWidth) / canvas.width;
+
+      pdf.addImage(imgData, "PNG", margin, headerHeight, pdfWidth, sliceHeight);
+
+
+      // --- FOOTER ---
+// --- FOOTER ---
+pdf.setFont("helvetica", "normal"); // plain sans-serif
+pdf.setFontSize(9);
+pdf.setTextColor(0, 0, 0); // black
+
+pdf.text(
+  "Nachi Medical Solutions (Pty) Ltd | Reg No: 2018/399543/07",
+  pageWidth / 2,
+  pageHeight - 25,
+  { align: "center" }
+);
+pdf.text(
+  "3499 Arctotis Street, Irene, Pretoria, 0157",
+  pageWidth / 2,
+  pageHeight - 20,
+  { align: "center" }
+);
+pdf.text(
+  "Tel: 0120010105 | Cell: 0711659551 | Email: info@nachimedicalsolutions.co.za",
+  pageWidth / 2,
+  pageHeight - 15,
+  { align: "center" }
+);
+pdf.text(
+  "Web: www.nachimedicalsolutions.co.za | Director: Devlia Kutama",
+  pageWidth / 2,
+  pageHeight - 10,
+  { align: "center" }
+);
+
+
+      heightLeft -= contentHeight;
+      offsetY += pageCanvas.height;
+
+      if (heightLeft > 0) pdf.addPage();
+    }
+
+    pdf.save(`Patient_Record_${currentForm.patient_name}.pdf`);
+  });
+};
+
+
+
+
   const [user, setUser] = useState(null); // null = not logged in
 const [loginData, setLoginData] = useState({ username: "", password: "" });
 const [loginError, setLoginError] = useState("");
 
-  const [formData, setFormData] = useState({
-    patientName: "",
-    address: "",
-    date: "",
-    notes: "",
-    nurse: { name: "", contact: "" },
-  });
+ const [formData, setFormData] = useState({
+  // Patient
+  patientName: "",
+  patientId: "",
+  dob: "",
+  contact: "",
+  address: "",
+
+  // Clinical
+  date: "",
+  time: "",
+  bp: "",
+  pulse: "",
+  temp: "",
+  spo2: "",
+  condition: "",
+
+  // History
+  allergies: false,
+  chronic: false,
+  pregnancy: false,
+  historyDetails: "",
+
+  // Treatment
+  medication: "",
+  diagnosis: "",
+  icd10: "",
+  ivTherapy: "",
+
+  // Admin
+  ivSite: "",
+  cannula: "",
+
+  // Drug
+  drugName: "",
+  dose: "",
+  batchNo: "",
+  expiry: "",
+
+  // Timing
+  startTime: "",
+  endTime: "",
+
+  // Reaction
+  reaction: "",
+  reactionDesc: "",
+
+  // Consent
+  consent: false,
+  patientSignature: "",
+
+  // Nurse
+  nurse: { name: "", contact: "" },
+});
 
   const [response, setResponse] = useState({ completed: "", notes: "", temp: "", bp: "" });
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [search, setSearch] = useState("");
 
   // ------------------- STYLES -------------------
   const styles = {
@@ -99,80 +286,58 @@ useEffect(() => {
   }, []);
 
   // ------------------- FORM CREATION -------------------
-  const handleSendForm = async () => {
-    setErrorMsg("");
-    setLoading(true);
-    try {
-      const linkToken = uuidv4();
-      const { data, error } = await supabase
-        .from("forms")
-        .insert([
-          {
-            patient_name: formData.patientName,
-            address: formData.address,
-            date: formData.date,
-            notes: formData.notes,
-            nurse_name: formData.nurse.name,
-            nurse_contact: formData.nurse.contact,
-            status: "Pending",
-            share_link: linkToken,
-            link_active: true
-          },
-        ])
-        .select();
+const handleSendForm = async () => {
+  setErrorMsg("");
+  setLoading(true);
 
-      if (error) throw error;
-      if (!data || data.length === 0) throw new Error("No data returned");
-
-      setForms([data[0], ...forms]);
-      setCurrentForm(data[0]);
-      setScreen("confirmation");
-
-      // reset form
-      setFormData({ patientName: "", address: "", date: "", notes: "", nurse: { name: "", contact: "" } });
-      setResponse({ completed: "", notes: "", temp: "", bp: "" });
-
-      // display the nurse link
-      console.log(`Send this link to nurse: https://your-app.com/nurse-form/${linkToken}`);
-    } catch (err) {
-      console.error("Error sending form:", err);
-      setErrorMsg("Failed to send form. Check Supabase policies or network.");
-    } finally {
+  try {
+    // Validate required fields
+    if (!formData.patientName || !formData.date) {
+      setErrorMsg("Patient name and date are required.");
       setLoading(false);
+      return;
     }
-  };
 
+    const linkToken = uuidv4();
+    const dateISO = new Date(formData.date).toISOString();
+
+    const { data, error } = await supabase
+      .from("forms")
+      .insert([
+        {
+          patient_name: formData.patientName.trim(),
+          patient_id: formData.patientId.trim() || null,
+          contact: formData.contact?.trim() || null,
+          date: formData.date ? dateISO : null ,
+        dob: formData.dob?.trim() || null,
+          nurse_name: formData.nurse?.name?.trim() || null,
+          nurse_contact: formData.nurse?.contact?.trim() || null,
+          status: "Pending",
+          share_link: linkToken,
+          link_active: true
+        },
+      ])
+      .select();
+
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error("No data returned");
+
+    setForms([data[0], ...forms]);
+    setCurrentForm(data[0]);
+    setScreen("confirmation");
+    setFormData({ patientName: "", address: "", date: "", notes: "", nurse: { name: "", contact: "" } });
+    setResponse({ completed: "", notes: "", temp: "", bp: "" });
+
+    const link = `https://your-app.com/nurse-form/${linkToken}`;
+    console.log(`Send this link to nurse via WhatsApp: ${link}`);
+  } catch (err) {
+    console.error("Error sending form:", err);
+    setErrorMsg("Failed to send form. Check Supabase policies or network.");
+  } finally {
+    setLoading(false);
+  }
+};
   // ------------------- NURSE SUBMISSION -------------------
-  const handleSubmitResponse = async () => {
-    setErrorMsg("");
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("forms")
-        .update({
-          response_completed: response.completed,
-          response_notes: response.notes,
-          response_temp: response.temp,
-          response_bp: response.bp,
-          status: "Submitted",
-          link_active: false, // expire link
-        })
-        .eq("id", currentForm.id)
-        .select();
-
-      if (error) throw error;
-      if (!data || data.length === 0) throw new Error("No data returned");
-
-      const updatedForms = forms.map(f => (f.id === currentForm.id ? data[0] : f));
-      setForms(updatedForms);
-      setScreen("success");
-    } catch (err) {
-      console.error("Error submitting response:", err);
-      setErrorMsg("Failed to submit response. Check Supabase policies or network.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // ------------------- SOFT DELETE -------------------
   const handleDeleteForm = async (id) => {
@@ -223,37 +388,153 @@ useEffect(() => {
   // ------------------- SCREENS -------------------
   if (loading) return <div style={{ ...styles.container, ...styles.center }}>Loading...</div>;
   
-  if (!user || screen === "login") {
+if (!user || screen === "login") {
   return (
-    <div style={{ ...styles.container, textAlign: "center" }}>
-      <h2>Admin Login</h2>
-      {loginError && <p style={{ color: "red" }}>{loginError}</p>}
-      <input
-        placeholder="Username"
-        style={styles.formInput}
-        value={loginData.username}
-        onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
-      />
-      <input
-        placeholder="Password"
-        type="password"
-        style={styles.formInput}
-        value={loginData.password}
-        onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-      />
-      <button style={styles.primaryBtn} onClick={handleLogin}>Login</button>
+    <div
+      style={{
+        height: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        background: "#f4f6f8",
+      }}
+    >
+      <div
+        style={{
+          width: 350,
+          padding: 30,
+          background: "white",
+          borderRadius: 12,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+          textAlign: "center",
+        }}
+      >
+        {/* ✅ LOGO */}
+        <img
+          src={logo}
+          alt="logo"
+          style={{ height: 70, marginBottom: 15 }}
+        />
+
+        <h2 style={{ marginBottom: 20 }}>Admin Login</h2>
+
+        {loginError && <p style={{ color: "red" }}>{loginError}</p>}
+
+        <input
+          placeholder="Username"
+          style={styles.formInput}
+          value={loginData.username}
+          onChange={(e) =>
+            setLoginData({ ...loginData, username: e.target.value })
+          }
+        />
+
+        <input
+          placeholder="Password"
+          type="password"
+          style={styles.formInput}
+          value={loginData.password}
+          onChange={(e) =>
+            setLoginData({ ...loginData, password: e.target.value })
+          }
+        />
+
+        <button style={{ ...styles.primaryBtn, width: "100%" }} onClick={handleLogin}>
+          Login
+        </button>
+      </div>
     </div>
   );
 }
-
   if (screen === "dashboard") {
+    const filteredForms = forms.filter((f) => {
+  const term = search.toLowerCase();
+
+  return (
+    f.patient_name?.toLowerCase().includes(term) ||
+    f.nurse_name?.toLowerCase().includes(term) ||
+    f.status?.toLowerCase().includes(term) ||
+    f.date?.toLowerCase().includes(term)
+  );
+});
     return (
+      
       <div style={styles.container}>
-        <div style={styles.header}>
-          <h2>Nurse Form Management</h2>
-          <button style={styles.primaryBtn} onClick={() => setScreen("create")}>+ New Form</button>
-		   <button style={{ ...styles.primaryBtn, background: "#dc3545" }} onClick={handleLogout}>Logout</button>
-        </div>
+<div
+  style={{
+    display: "flex",
+    flexDirection: "column",   // stack items vertically
+    gap: 8,                     // space between title and buttons
+    marginBottom: 20,
+  }}
+>
+  <h2 style={{ margin: 0, width: "100%" }}>
+    Nurse Form Management
+  </h2>
+
+  <div
+    style={{
+      display: "flex",
+      flexWrap: "nowrap",
+      gap: 6,
+      overflowX: "auto",
+    }}
+  >
+    <button
+      style={{
+        flex: "1 1 auto",
+        minWidth: 60,
+        maxWidth: 150,
+        padding: "6px 8px",
+        fontSize: "12px",
+        borderRadius: 6,
+        border: "none",
+        background: "#007bff",
+        color: "#fff",
+        cursor: "pointer",
+        whiteSpace: "nowrap",
+      }}
+      onClick={() => setScreen("create")}
+    >
+      + New Form
+    </button>
+
+    <button
+      style={{
+        flex: "1 1 auto",
+        minWidth: 60,
+        maxWidth: 150,
+        padding: "6px 8px",
+        fontSize: "12px",
+        borderRadius: 6,
+        border: "none",
+        background: "#dc3545",
+        color: "#fff",
+        cursor: "pointer",
+        whiteSpace: "nowrap",
+      }}
+      onClick={handleLogout}
+    >
+      Logout
+    </button>
+  </div>
+</div>
+       
+       <div style={{ marginTop: 10 }}>
+  <input
+    placeholder="🔍 Search patient, nurse, status, date..."
+    style={{
+      width: "100%",
+      padding: 10,
+      borderRadius: 8,
+      border: "1px solid #ccc",
+      marginTop: 10
+    }}
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+  />
+</div>
+
         {errorMsg && <div style={styles.error}>{errorMsg}</div>}
         <table style={styles.table}>
           <thead>
@@ -265,7 +546,7 @@ useEffect(() => {
             </tr>
           </thead>
           <tbody>
-            {forms.map(f => (
+            {filteredForms.map(f => (
               <tr key={f.id} style={{ cursor: "pointer" }} onClick={() => { setCurrentForm(f); setScreen("view"); }}>
                 <td style={styles.thtd}>{f.patient_name}</td>
                 <td style={styles.thtd}>{f.date}</td>
@@ -282,16 +563,19 @@ useEffect(() => {
   if (screen === "create") {
     return (
       <div style={styles.container}>
-        <h2>Create Form</h2>
+        <h4>Patient Details</h4>
         {errorMsg && <div style={styles.error}>{errorMsg}</div>}
-        <input placeholder="Patient Name" style={styles.formInput} value={formData.patientName} onChange={e => setFormData({ ...formData, patientName: e.target.value })} />
-        <input placeholder="Address" style={styles.formInput} value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
-        <input type="datetime-local" style={styles.formInput} value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
-        <textarea placeholder="Notes" style={styles.textarea} value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} />
-        <h4>Assign Nurse</h4>
+       
+<input placeholder="Name" style={styles.formInput} onChange={e => setFormData({...formData, patientName: e.target.value})} />
+<input placeholder="ID Number" style={styles.formInput} onChange={e => setFormData({...formData, patientId: e.target.value})} />
+<input type="date" style={styles.formInput} onChange={e => setFormData({...formData, date: e.target.value})} />
+<input placeholder="Contact" style={styles.formInput} onChange={e => setFormData({...formData, contact: e.target.value})} />
+<input placeholder="Date of Birth" style={styles.formInput} onChange={e => setFormData({...formData, dob: e.target.value})} />
+       
+        <h4>Assign Practitioner</h4>
         <div style={styles.row}>
-          <input placeholder="Name" style={styles.formInput} value={formData.nurse.name} onChange={e => setFormData({ ...formData, nurse: { ...formData.nurse, name: e.target.value } })} />
-          <input placeholder="Contact" style={styles.formInput} value={formData.nurse.contact} onChange={e => setFormData({ ...formData, nurse: { ...formData.nurse, contact: e.target.value } })} />
+          <input placeholder="Practitioner Name" style={styles.formInput} value={formData.nurse.name} onChange={e => setFormData({ ...formData, nurse: { ...formData.nurse, name: e.target.value } })} />
+          <input placeholder="Email Address" style={styles.formInput} value={formData.nurse.contact} onChange={e => setFormData({ ...formData, nurse: { ...formData.nurse, contact: e.target.value } })} />
         </div>
         <div style={styles.actions}>
           <button style={styles.primaryBtn} onClick={handleSendForm}>Send Form</button>
@@ -319,37 +603,131 @@ useEffect(() => {
     );
   }
   
-  
+
 
   // ------------------- VIEW SCREEN -------------------
 if (screen === "view") {
   return (
     <div style={styles.container}>
-      <h2>Patient Visit Details</h2>
-      {errorMsg && <div style={styles.error}>{errorMsg}</div>}
+   
 
-      <div style={styles.card}>
-        <strong>Patient Name:</strong> {currentForm.patient_name} <br />
-        <strong>Address:</strong> {currentForm.address} <br />
-        <strong>Visit Date:</strong> {currentForm.date} <br />
-        <strong>Initial Notes:</strong> {currentForm.notes || "None"} <br />
-        <strong>Nurse:</strong> {currentForm.nurse_name} ({currentForm.nurse_contact}) <br />
-        <strong>Status:</strong> {currentForm.status} <br />
+{/* HEADER (excluded from canvas) */}
+  <div id="pdf-header" data-html2canvas-ignore>
+<div
+  style={{
+    position: "fixed",
+    top: 10,
+    right: 10,
+    display: "flex",
+    gap: 6,
+    zIndex: 1000,
+    justifyContent: "flex-end",
+    flexWrap: "nowrap", // keep everything on one line
+    overflowX: "auto", // allows horizontal scroll if extremely narrow
+    padding: "0 5px",
+  }}
+>
+  {/** Back Button **/}
+  <button
+    style={{
+      flex: "1 1 auto",
+      minWidth: 50,
+      maxWidth: 150,
+      padding: "6px 8px",
+      fontSize: "12px",
+      borderRadius: 6,
+      border: "none",
+      background: "#6c757d",
+      color: "#fff",
+      cursor: "pointer",
+      whiteSpace: "nowrap",
+    }}
+    onClick={() => setScreen("dashboard")}
+  >
+    Back
+  </button>
 
-{currentForm.completed ? (
-  <>
-    <hr />
-    <h4>Nurse Response</h4>
-    <p><strong>Visit Completed:</strong> {currentForm.completed}</p>
-    <p><strong>Notes:</strong> {currentForm.response_notes || "None"}</p>
-    <p><strong>Temperature:</strong> {currentForm.temp || "N/A"}</p>
-    <p><strong>Blood Pressure:</strong> {currentForm.bp || "N/A"}</p>
-  </>
-) : (
-  <p style={styles.muted}>No nurse response submitted yet.</p>
-)}
+  {/** Download PDF **/}
+  <button
+    style={{
+      flex: "1 1 auto",
+      minWidth: 50,
+      maxWidth: 150,
+      padding: "6px 8px",
+      fontSize: "12px",
+      borderRadius: 6,
+      border: "none",
+      background: "#007bff",
+      color: "#fff",
+      cursor: "pointer",
+      whiteSpace: "nowrap",
+    }}
+    onClick={downloadPDF}
+  >
+    📄 Download PDF
+  </button>
 
-        {currentForm.share_link && currentForm.link_active && (
+  {/** Edit Form **/}
+  <button
+    style={{
+      flex: "1 1 auto",
+      minWidth: 50,
+      maxWidth: 150,
+      padding: "6px 8px",
+      fontSize: "12px",
+      borderRadius: 6,
+      border: "none",
+      background: "#28a745",
+      color: "#fff",
+      cursor: "pointer",
+      whiteSpace: "nowrap",
+    }}
+    onClick={() => navigate(`/AdminEdit/${currentForm.id}`)}
+  >
+    ✏️ Edit Form
+  </button>
+
+  {/** Delete Form **/}
+  <button
+    style={{
+      flex: "1 1 auto",
+      minWidth: 50,
+      maxWidth: 150,
+      padding: "6px 8px",
+      fontSize: "12px",
+      borderRadius: 6,
+      border: "none",
+      background: "#dc3545",
+      color: "#fff",
+      cursor: "pointer",
+      whiteSpace: "nowrap",
+    }}
+    onClick={() => setShowDeleteConfirm(true)}
+  >
+    🗑 Delete Form
+  </button>
+</div>
+
+
+    <div style={{ display: "flex", alignItems: "center", borderBottom: "2px solid #000", paddingBottom: 10,paddingTop: 35, marginBottom: 20 }}>
+      <div>
+        <img src={logo} alt="logo" style={{ height: 60 }} />
+      </div>
+      <div style={{ flex: 1, textAlign: "center" }}>
+        <h2 style={{ fontStyle: "italic", margin: 0, fontFamily: "serif", color: "#0B2242", lineHeight: 1.3,   fontSize: 18}}>
+          Nachi Medical Solutions (Pty) Ltd
+        </h2>
+        <p style={{ fontSize: 11, fontStyle: "italic", margin: 0, fontFamily: "serif", color: "#0B2242" }}>
+          Practice number Registered Nurse ND Kutama 1274872
+        </p>
+      </div>
+    </div>
+  </div>
+      {/* PDF CONTENT START */}
+      <div id="pdf-content" style={{ background: "transparent", padding: 0, lineHeight: 1.3,   fontSize: 9}}>
+
+
+         {currentForm.share_link && currentForm.link_active && (
           <p>
             Link:{" "}
             <a
@@ -361,17 +739,325 @@ if (screen === "view") {
             </a>
           </p>
         )}
-      </div>
 
-      <div style={styles.actions}>
-        <button style={styles.primaryBtn} onClick={() => setScreen("dashboard")}>Back</button>
-        <button
+        {/* PATIENT DETAILS */}
+        <h4>Patient Details</h4>
+
+        
+
+        <p><strong>Name:</strong> {currentForm.patient_name}</p>
+        <p><strong>ID:</strong> {currentForm.patient_id}</p>
+        <p><strong>DOB:</strong> {currentForm.dob}</p>
+        <p><strong>Contact:</strong> {currentForm.contact}</p>
+
+        <hr />
+
+        {/* CLINICAL ASSESSMENT */}
+        <h4>Clinical Assessment</h4>
+
+         {/* DATE AND TIME */}
+       <div style={{ display: "flex", gap: 20, marginBottom: 10, alignItems: "center" }}>
+  <div>
+    <strong>Date: </strong>
+    <span>{currentForm.date || "____/____/____"}</span>
+  </div>
+
+  <div>
+    <strong>Time: </strong>
+    <span>{currentForm.visit_time || "____:____"}</span>
+  </div>
+</div>
+ {/* chronics*/}
+<div style={{ display: "flex", gap: 20, marginBottom: 10, alignItems: "center" }}>
+  <div>
+    <span>BP: </span>
+    <span>{currentForm.bp || "___/___"} mmHg</span>
+  </div>
+
+  <div>
+    <span>Pulse: </span>
+    <span >{currentForm.pulse || "___"} bpm</span>
+  </div>
+
+  <div>
+    <span>Temp: </span>
+    <span>{currentForm.temp || "___"}°C</span>
+  </div>
+
+  <div>
+    <span>SpO₂: </span>
+    <span>{currentForm.spo2 || "___"}%</span>
+  </div>
+</div>
+
+
+        
+<p style={{ display: "flex", alignItems: "center", gap: 15 }}>
+  Condition:
+
+  <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+    <span>{currentForm.condition === "Stable" ? "☑" : "☐"}</span>
+    <span>Stable</span>
+  </span>
+
+  <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+    <span>{currentForm.condition === "Unstable" ? "☑" : "☐"}</span>
+    <span>Unstable</span>
+  </span>
+</p>
+
+        
+
+        <hr />
+
+        {/* HISTORY */}
+        <h4>Medical History</h4>
+<p style={{ display: "flex", alignItems: "center", gap: 10 }}>
+  <span>{currentForm.allergies ? "☑" : "☐"}</span>
+  <span>Allergies</span>
+
+  <span>{currentForm.chronic ? "☑" : "☐"}</span>
+  <span>Chronic Illness</span>
+
+<span>{currentForm.pregnancy ? "☑" : "☐"}</span>
+  <span>Pregnancy</span>
+
+ 
+
+</p>
+<p>  Details : {currentForm.history_details || "None"} </p>
+<p>Medication : {currentForm.medication || "None"} </p>
+
+
+        <hr />
+
+        {/* DIAGNOSIS */}
+        <h4>Diagnosis / Indication</h4>
+     
+        <p>ICD-10: {currentForm.icd10}</p>
+
+        <hr />
+
+        {/* TREATMENT */}
+        <h4 >Treatment</h4>
+
+        <div style={{ display: "flex", gap: 30, marginBottom: 10, alignItems: "center" }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+    IV Therapy:
+    <span style={{  minWidth: 120 }}>
+      {currentForm.iv_therapy || "____________"}
+    </span>
+  </div>
+</div>
+
+        <hr />
+
+{/* ADMINISTRATION RECORD */}
+<h4 style={{marginTop: 30}}>Administration Record</h4>
+<div style={{ display: "flex", gap: 30, marginBottom: 10, alignItems: "center" }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+    IV Site:
+    <span style={{  minWidth: 120 }}>
+      {currentForm.iv_site || "____________"}
+    </span>
+  </div>
+
+  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+    Cannula:
+    <span style={{  minWidth: 120 }}>
+      {currentForm.cannula || "____________"}
+    </span>
+  </div>
+</div>
+
+
+        <hr />
+
+        {/* DRUG */}
+        <h4>Drug Dose Batch No Expiry</h4>
+  
+    <div style={{ display: "flex", gap: 30, marginBottom: 10, alignItems: "center" }}>
+  <div>
+    <strong>Start: </strong>
+    <span>{currentForm.start_time|| "____:____"}</span>
+  </div>
+
+  <div>
+    <strong>End: </strong>
+    <span>{currentForm.end_time|| "____:____"}</span>
+  </div>
+</div>
+        
+
+     {/* REACTION */}
+
+<p style={{ display: "flex", alignItems: "center", gap: 20 }}>
+  <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+    <span>Reaction:   {currentForm.reaction === "None" ? "☑" : "☐"}</span>
+    <span>None</span>
+  </span>
+
+  <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+    <span>{currentForm.reaction === "Yes" ? "☑" : "☐"}</span>
+    <span>Yes:</span>
+    <span style={{minWidth: 150 }}>
+      {currentForm.reaction === "Yes" ? currentForm.reaction_desc || "__________" : ""}
+    </span>
+  </span>
+</p>
+
+
+     
+
+{/* CONSENT */}
+<h4>Consent</h4>
+
+<p>I confirm that:</p>
+<ul style={{ margin: 5, paddingLeft: 20, gap: 5 }}>
+  <li>Information provided is correct</li>
+  <li>Procedure, risks, and alternatives explained</li>
+  <li>Patient consented to IV therapy</li>
+</ul>
+
+{/* SIGNATURES */}
+
+
+  <div style={{ marginTop: 15 }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    Patient Signature:
+    {currentForm.patient_signature ? (
+      <img
+        src={currentForm.patient_signature}
+        alt="patient signature"
+        style={{ height: 40, borderBottom: "1px solid #000" }}
+      />
+    ) : (
+      <span style={{ display: "inline-block", borderBottom: "1px solid #000", minWidth: 200 }}>
+        {/* empty underline when no signature */}
+      </span>
+    )}
+  </div>
+
+
+
+{/* Practitioner Signature */}
+<p style={{ marginTop: 30 }}>
+    <strong>Practitioner:</strong> {currentForm.nurse_name}
+  </p>
+<div style={{ marginTop: 0 }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+    <strong>Practitioner Signature:</strong>
+    {currentForm.practitioner_signature ? (
+      <img
+        src={currentForm.practitioner_signature}
+        alt="practitioner signature"
+        style={{ height: 40, borderBottom: "1px solid #000" }}
+      />
+    ) : (
+      <span style={{ display: "inline-block", borderBottom: "1px solid #000", minWidth: 200 }}>
+        {/* empty underline when no signature */}
+      </span>
+    )}
+  </div>
+  
+</div>
+
+
+
+</div>
+
+
+
+      </div>
+      {/* PDF CONTENT END */}
+
+    {/* FOOTER (excluded from canvas) */}
+{/* FOOTER (excluded from canvas) */}
+<div id="pdf-footer" data-html2canvas-ignore>
+  <div style={{
+    borderTop: "1px solid #000",
+    marginTop: 20,
+    paddingTop: 8,
+    fontSize: 8,
+    textAlign: "center",
+    lineHeight: 1.3
+  }}>
+    <p style={{ margin: 2 }}>
+      <strong>Nachi Medical Solutions (Pty) Ltd</strong> | Reg No: 2018/399543/07
+    </p>
+    <p style={{ margin: 2 }}>3499 Arctotis Street, Irene, Pretoria, 0157</p>
+    <p style={{ margin: 2 }}>Tel: 0120010105 | Cell: 0711659551</p>
+    <p style={{ margin: 2 }}>Email: info@nachimedicalsolutions.co.za | Web: www.nachimedicalsolutions.co.za</p>
+    <p style={{ margin: 2 }}>Director: Devlia Kutama</p>
+  </div>
+</div>
+
+{/* MODERN DELETE CONFIRM MODAL */}
+      {showDeleteConfirm && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              padding: 30,
+              borderRadius: 12,
+              maxWidth: 400,
+              textAlign: "center",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+            }}
+          >
+            <h3 style={{ marginBottom: 20 }}>Confirm Deletion</h3>
+            <p>Are you sure you want to delete this form?</p>
+            <div style={{ display: "flex", justifyContent: "space-around", marginTop: 20 }}>
+               <button
           style={{ ...styles.primaryBtn, background: "#dc3545" }}
-          onClick={() => handleDeleteForm(currentForm.id)}
+          onClick={async () => {
+            try {
+              // Soft delete in Supabase
+              const { error } = await supabase
+                .from("forms")
+                .update({ deleted: true, status: "Deleted" })
+                .eq("id", currentForm.id);
+
+              if (error) throw error;
+
+              // Update local state
+              setForms(forms.map(f => f.id === currentForm.id ? { ...f, deleted: true, status: "Deleted" } : f));
+              setScreen("dashboard");
+            } catch (err) {
+              console.error("Error deleting form:", err);
+              setErrorMsg("Failed to delete form.");
+            } finally {
+              setShowDeleteConfirm(false);
+            }
+          }}
         >
           Delete
         </button>
-      </div>
+              <button
+                style={{ ...styles.primaryBtn, background: "#6c757d" }}
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}}
+}
+
+}

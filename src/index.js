@@ -3,7 +3,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 import App from "./App";
-import NurseFormPage from "./NurseFormPage"; // separate component
+import NurseFormPage from "./NurseFormPage"; 
+import AdminEdit from "./AdminEdit";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import reportWebVitals from "./reportWebVitals";
 
@@ -15,6 +16,7 @@ root.render(
       <Routes>
         <Route path="/*" element={<App />} />
         <Route path="/nurse-form/:token" element={<NurseFormPage />} />
+         <Route path="/AdminEdit/:id" element={<AdminEdit />} /> 
       </Routes>
     </Router>
   </React.StrictMode>
