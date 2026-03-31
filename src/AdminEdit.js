@@ -3,15 +3,18 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 import logo from "./logo.png";
-import SignatureCanvas from "react-signature-canvas";
+import SignatureCanvas from 'react-signature-canvas';
+import react from "react";
+//import SignatureCanvas from "react-signature-canvas";
 
 export default function NurseFormPage() {
   const { id } = useParams(); // form ID passed via route
-  const formRef = useRef();
+ // const formRef = useRef();
  const patientSigRef = useRef(null);
   const practitionerSigRef = useRef(null);
 
   const [nurseName, setNurseName] = useState("");
+  
   const [currentForm, setCurrentForm] = useState(null);
   const [response, setResponse] = useState({
     completed: "",
@@ -40,7 +43,9 @@ export default function NurseFormPage() {
     startTime: "",
     endTime: "",
     reaction: "",
-    reactionDetails: "",
+    reaction_desc: "",
+    reaction_assessment: "",
+    reaction_treatment: "",
     consent: false,
     patientSignature: ""
   });
@@ -60,6 +65,12 @@ export default function NurseFormPage() {
   };
 
   // ------------------- FETCH FORM -------------------
+  // Prepopulate practitioner signature if it exists
+useEffect(() => {
+  if (currentForm?.practitioner_signature) {
+    practitionerSigRef.current.fromDataURL(currentForm.practitioner_signature);
+  }
+}, [currentForm]);
   useEffect(() => {
     const fetchForm = async () => {
       try {
@@ -105,7 +116,9 @@ export default function NurseFormPage() {
           startTime: data.start_time || "",
           endTime: data.end_time || "",
           reaction: data.reaction || "",
-          reactionDetails: data.reaction_desc || "",
+          reaction_Desc: data.reaction_desc || "",
+          reaction_assessment: data.reaction_assessment || "",
+          reaction_treatment: data.reaction_treatment || "",
           consent: data.consent_confirmed || false,
         //  patientSignature: data.patient_signature || ""
         });
@@ -177,8 +190,11 @@ const handleBack = () => {
           start_time: response.startTime,
           end_time: response.endTime,
           reaction: response.reaction,
-          reaction_desc: response.reactionDetails,
+          reaction_desc: response.reaction_Desc,
+            reaction_assessment: response.reaction_assessment,
+            reaction_treatment: response.reaction_treatment,
           consent_confirmed: response.consent,
+          nurse_name: nurseName,
           patient_signature: signatureData,
           practitioner_signature: psignatureData,
           status: "Submitted"
@@ -373,23 +389,76 @@ const handleBack = () => {
         </div>
 
         {/* REACTION */}
-        <div style={styles.section}>
-          Reaction
-          <select value={response.reaction} style={styles.formInput}
-            onChange={e => setResponse({ ...response, reaction: e.target.value })}
-          >
-            <option value="">Select</option>
-            <option value="None">None</option>
-            <option value="Yes">Yes</option>
-          </select>
-          {response.reaction === "Yes" && (
-            <textarea
-              placeholder="Describe reaction"
-              style={styles.textarea}
-              onChange={e => setResponse({ ...response, reactionDetails: e.target.value })}
-            />
-          )}
-        </div>
+      {/* REACTION */}
+<div style={styles.section}>
+  <label>Reaction</label>
+
+  <div style={{ display: "flex", gap: 20, marginTop: 8 }}>
+    <label>
+      <input
+        type="radio"
+        name="reaction"
+        value="None"
+        checked={response.reaction === "None"}
+        onChange={e =>
+          setResponse({ ...response, reaction: e.target.value })
+        }
+      /> None
+    </label>
+
+    <label>
+      <input
+        type="radio"
+        name="reaction"
+        value="Yes"
+        checked={response.reaction === "Yes"}
+        onChange={e =>
+          setResponse({ ...response, reaction: e.target.value })
+        }
+      /> Yes
+    </label>
+  </div>
+
+ {response.reaction === "Yes" && (
+  <div style={{ marginTop: 10 }}>
+    <label>Assessment</label>
+    <textarea
+      value={response.reaction_assessment || ""}
+      style={styles.textarea}
+      onChange={e =>
+        setResponse({
+          ...response,
+          reaction_assessment: e.target.value
+        })
+      }
+    />
+
+    <label>Diagnosis</label>
+    <textarea
+      value={response.reaction_Desc || ""}
+      style={styles.textarea}
+      onChange={e =>
+        setResponse({
+          ...response,
+          reaction_Desc: e.target.value
+        })
+      }
+    />
+
+    <label>Treatment</label>
+    <textarea
+      value={response.reaction_treatment || ""}
+      style={styles.textarea}
+      onChange={e =>
+        setResponse({
+          ...response,
+          reaction_treatment: e.target.value
+        })
+      }
+    />
+  </div>
+)}
+</div>
 
 <hr />
 <div style={styles.section}>
@@ -443,52 +512,47 @@ const handleBack = () => {
           
 
   {/* SIGNATURES (UNCHANGED UI) */}
- <div>
-  <p><strong>Patient Signature:</strong></p>
 
-  {currentForm.patient_signature ? (
-    <img
-      src={currentForm.patient_signature}
-      alt="Patient Signature"
-      style={{
-        border: "1px solid #ccc",
-        borderRadius: 8,
-        width: 400,
-        height: 100,
-        objectFit: "contain"
-      }}
-    />
-  ) : (
-    <p style={{ fontStyle: "italic", color: "#777" }}>
-      No signature provided
-    </p>
-  )}
-</div>
-
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+    <strong>Patient Signature:</strong>
+    {currentForm.patient_signature ? (
+      <img
+        src={currentForm.patient_signature}
+        alt="patient signature"
+        style={{ height: 40, borderBottom: "1px solid #000" }}
+      />
+    ) : (
+      <span style={{ display: "inline-block", borderBottom: "1px solid #000", minWidth: 200 }}>
+        {/* empty underline when no signature */}
+      </span>
+    )}
+  </div>
         <hr />
 
-       <div>
-  <p><strong>Practitioner:</strong> {nurseName}</p>
-  <p><strong>Practitioner Signature:</strong></p>
-
-  {currentForm.practitioner_signature ? (
-    <img
-      src={currentForm.practitioner_signature}
-      alt="Practitioner Signature"
-      style={{
-        border: "1px solid #ccc",
-        borderRadius: 8,
-        width: 400,
-        height: 100,
-        objectFit: "contain"
-      }}
-    />
-  ) : (
-    <p style={{ fontStyle: "italic", color: "#777" }}>
-      No signature provided
-    </p>
-  )}
+        <div>
+          <div style={{ marginTop: 10 }}>
+  <strong>Practitioner:</strong>
+  <input
+    type="text"
+    value={nurseName}
+    onChange={(e) => setNurseName(e.target.value)}
+    style={{
+      marginLeft: 10,
+      padding: "5px 8px",
+      borderRadius: 5,
+      border: "1px solid #ccc",
+      fontSize: 12
+    }}
+  />
 </div>
+          <p><strong>Practitioner Signature:</strong></p>
+          <SignatureCanvas ref={practitionerSigRef} penColor="black"
+            canvasProps={{ width: 350, height: 100, style: { border: "1px solid #ccc", borderRadius: 8 } }}
+          />
+          <p>
+          <button onClick={() => practitionerSigRef.current.clear()}>Clear Signature</button>
+          </p>
+        </div>
 
           
         </div>

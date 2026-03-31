@@ -4,19 +4,21 @@ import { useParams } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 import logo from "./logo.png";
 
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+//import html2canvas from "html2canvas";
+//import jsPDF from "jspdf";
 import SignatureCanvas from 'react-signature-canvas';
+import react from "react";
 
 export default function NurseFormPage() {
   const { token } = useParams();
-  const formRef = useRef(); // for PDF
+ // const formRef = useRef(); // for PDF
 
   const patientSigRef = useRef(null);
   const practitionerSigRef = useRef(null);
     const [nurseName, setNurseName] = useState("");
 
   const [currentForm, setCurrentForm] = useState(null);
+  
   const [response, setResponse] = useState({
     completed: "",
     notes: "",
@@ -50,7 +52,9 @@ export default function NurseFormPage() {
     endTime: "",
 
     reaction: "",
-    reactionDetails: "",
+    reaction_Desc: "",
+    reaction_assessment: "",
+    reaction_treatment: "",
 
     consent: false,
     patientSignature: ""
@@ -59,7 +63,9 @@ export default function NurseFormPage() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [submitted, setSubmitted] = useState(false); // track submission
-
+const toNull = (value) => {
+  return value === "" || value === undefined ? null : value;
+};
   const styles = {
     container: {
       maxWidth: 600,
@@ -143,52 +149,57 @@ export default function NurseFormPage() {
       psignatureData = canvas.toDataURL("image/png"); // base64 image
     }
     // ------------------- UPDATE FORM -------------------
-    const { error } = await supabase
-      .from("forms")
-      .update({
-        completed: response.completed,
-        response_notes: response.notes,
-        temp: response.temp,
-        bp: response.bp,
 
-        date: response.visitDate ? new Date(response.visitDate).toISOString() : null,
-        visit_time: response.visitTime,
-        pulse: response.pulse,
-        spo2: response.spo2,
-        condition: response.condition,
 
-        allergies: response.allergies,
-        chronic: response.chronic,
-        pregnancy: response.pregnancy,
-        history_details: response.historyDetails,
+// Prepare update
+const { error } = await supabase
+  .from("forms")
+  .update({
+    completed: toNull(response.completed),
+    response_notes: toNull(response.notes),
+    temp: toNull(response.temp),
+    bp: toNull(response.bp),
 
-        medication: response.medication,
-        diagnosis: response.diagnosis,
-        icd10: response.icd10,
+    // Ensure date is never null
+    date: toNull(response.visitDate),
+    visit_time: toNull(response.visitTime),
+    pulse: toNull(response.pulse),
+    spo2: toNull(response.spo2),
+    condition: toNull(response.condition),
 
-        iv_therapy: response.ivTherapy,
-        iv_site: response.ivSite,
-        cannula: response.cannula,
+    allergies: response.allergies || false,
+    chronic: response.chronic || false,
+    pregnancy: response.pregnancy || false,
+    history_details: toNull(response.historyDetails),
 
-        drug_name: response.drug,
-        dose: response.dose,
-        batch_no: response.batchNo,
-        expiry: response.expiry,
-        start_time: response.startTime,
-        end_time: response.endTime,
+    medication: toNull(response.medication),
+    diagnosis: toNull(response.diagnosis),
+    icd10: toNull(response.icd10),
 
-        reaction: response.reaction,
-        reaction_desc: response.reactionDetails,
+    iv_therapy: toNull(response.ivTherapy),
+    iv_site: toNull(response.ivSite),
+    cannula: toNull(response.cannula),
 
-        consent_confirmed: true,
-        patient_signature: signatureData, // <-- store signature here
-        practitioner_signature: psignatureData, // <-- store practitioner signature here
+    drug_name: toNull(response.drug),
+    dose: toNull(response.dose),
+    batch_no: toNull(response.batchNo),
+    expiry: toNull(response.expiry),
+    start_time: toNull(response.startTime),
+    end_time: toNull(response.endTime),
 
-        status: "Submitted",
-        link_active: false,
-      })
-      .eq("id", currentForm.id);
+    reaction: toNull(response.reaction),
+    reaction_desc: toNull(response.reactionDetails),
+    reaction_assessment: toNull(response.reactionassessment),
+    reaction_treatment: toNull(response.reactiontreatment),
 
+    consent_confirmed: true,
+    patient_signature: signatureData || null,
+    practitioner_signature: psignatureData || null,
+
+    status: "Submitted",
+    link_active: false,
+  })
+  .eq("id", currentForm.id);
     if (error) throw error;
 
     setSubmitted(true);
@@ -341,24 +352,73 @@ export default function NurseFormPage() {
           />
         </div>
 
-        {/* REACTION */}
-        <div style={styles.section}>
-          Reaction
-          <select style={styles.formInput}
-            onChange={e => setResponse({ ...response, reaction: e.target.value })}
-          >
-            <option value="">Select</option>
-            <option value="None">None</option>
-            <option value="Yes">Yes</option>
-          </select>
-          {response.reaction === "Yes" && (
-            <textarea
-              placeholder="Describe reaction"
-              style={styles.textarea}
-              onChange={e => setResponse({ ...response, reactionDetails: e.target.value })}
-            />
-          )}
-        </div>
+      {/* REACTION */}
+<div style={styles.section}>
+  <label>Reaction</label>
+
+  <div style={{ display: "flex", gap: 20, marginTop: 8 }}>
+    <label>
+      <input
+        type="radio"
+        name="reaction"
+        value="None"
+        checked={response.reaction === "None"}
+        onChange={e =>
+          setResponse({ ...response, reaction: e.target.value })
+        }
+      /> None
+    </label>
+
+    <label>
+      <input
+        type="radio"
+        name="reaction"
+        value="Yes"
+        checked={response.reaction === "Yes"}
+        onChange={e =>
+          setResponse({ ...response, reaction: e.target.value })
+        }
+      /> Yes
+    </label>
+  </div>
+
+  {response.reaction === "Yes" && (
+    <div style={{ marginTop: 10 }}>
+      <label>Assessment</label>
+      <textarea
+        style={styles.textarea}
+        onChange={e =>
+          setResponse({
+            ...response,
+            reactionassessment: e.target.value
+          })
+        }
+      />
+
+      <label>Diagnosis</label>
+      <textarea
+        style={styles.textarea}
+        onChange={e =>
+          setResponse({
+            ...response,
+            reactionDetails: e.target.value
+          })
+        }
+      />
+
+      <label>Treatment</label>
+      <textarea
+        style={styles.textarea}
+        onChange={e =>
+          setResponse({
+            ...response,
+            reactiontreatment: e.target.value
+          })
+        }
+      />
+    </div>
+  )}
+</div>
 
 <hr />
 <div style={styles.section}>

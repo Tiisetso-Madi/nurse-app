@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import { v4 as uuidv4 } from "uuid"; // npm install uuid
-import { useParams } from "react-router-dom"; // for nurse link route
+//import { useParams } from "react-router-dom"; // for nurse link route
 import logo from "./logo.png";
 import jsPDF from "jspdf";
+
 import html2canvas from "html2canvas";
 import { useNavigate } from "react-router-dom";
+import react from "react";
+import { REALTIME_CHANNEL_STATES } from "@supabase/supabase-js";
+import emailjs from "@emailjs/browser";
+
 
 
 
@@ -14,6 +19,7 @@ export default function App() {
   const [screen, setScreen] = useState("dashboard");
   const [forms, setForms] = useState([]);
   const [currentForm, setCurrentForm] = useState(null);
+  const [response, setResponse] = useState({});
   // Add these hooks at the top
 const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -63,8 +69,8 @@ pdf.setLineWidth(0.5);
 pdf.line(margin, 25, pageWidth - margin, 25);
 
 // --- WATERMARK ---
-const wmWidth = pageWidth / 2;   // scale dynamically
-const wmHeight = wmWidth;        // keep square
+//const wmWidth = pageWidth / 2;   // scale dynamically
+//const wmHeight = wmWidth;        // keep square
 // --- CREATE FADED WATERMARK ONCE ---
 const watermarkCanvas = document.createElement("canvas");
 const ctx = watermarkCanvas.getContext("2d");
@@ -196,7 +202,9 @@ const [loginError, setLoginError] = useState("");
 
   // Reaction
   reaction: "",
-  reactionDesc: "",
+  reaction_desc: "",
+  reaction_assessment: "",
+  reaction_treatment: "",
 
   // Consent
   consent: false,
@@ -206,17 +214,18 @@ const [loginError, setLoginError] = useState("");
   nurse: { name: "", contact: "" },
 });
 
-  const [response, setResponse] = useState({ completed: "", notes: "", temp: "", bp: "" });
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [search, setSearch] = useState("");
+
 
   // ------------------- STYLES -------------------
   const styles = {
     container: { maxWidth: 600, margin: "20px auto", padding: 20, fontFamily: "Arial, sans-serif", background: "#f4f6f8", borderRadius: 10 },
     header: { display: "flex", justifyContent: "space-between", alignItems: "center" },
     primaryBtn: { padding: "10px 15px", borderRadius: 8, border: "none", cursor: "pointer", background: "#007bff", color: "white" },
-    table: { width: "100%", borderCollapse: "collapse", background: "white", marginTop: 20 },
+    table: { width: "98%", borderCollapse: "collapse", background: "white", marginTop: 20, fontSize: 11 },
     thtd: { padding: 10, borderBottom: "1px solid #ddd", textAlign: "left" },
     formInput: { width: "100%", padding: 10, marginBottom: 12, borderRadius: 8, border: "1px solid #ccc" },
     textarea: { width: "100%", padding: 10, marginBottom: 12, borderRadius: 8, border: "1px solid #ccc", minHeight: 80 },
@@ -328,8 +337,29 @@ const handleSendForm = async () => {
     setFormData({ patientName: "", address: "", date: "", notes: "", nurse: { name: "", contact: "" } });
     setResponse({ completed: "", notes: "", temp: "", bp: "" });
 
-    const link = `https://your-app.com/nurse-form/${linkToken}`;
+    const link = `https://localhost:3000/nurse-form/${linkToken}`;
     console.log(`Send this link to nurse via WhatsApp: ${link}`);
+
+
+
+const templateParams = {
+      patient_name: formData.patientName,
+      form_link: link,
+      nurse_email: formData.nurse.contact,
+    };
+
+    await emailjs.send(
+      "service_5y7yfvi",    // replace with your EmailJS service ID
+      "template_2tuj162",   // replace with your EmailJS template ID
+      {
+        email:  formData.nurse?.contact?.trim(),    // this must not be empty
+        name:  formData.patientName.trim(),      // optional, depends on your template
+        form_link: link,       // the link to the nurse form
+      },
+      "aQSTcBp6a7DnSBIwU"        // replace with your EmailJS user ID
+    );
+
+
   } catch (err) {
     console.error("Error sending form:", err);
     setErrorMsg("Failed to send form. Check Supabase policies or network.");
@@ -340,50 +370,50 @@ const handleSendForm = async () => {
   // ------------------- NURSE SUBMISSION -------------------
 
   // ------------------- SOFT DELETE -------------------
-  const handleDeleteForm = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this form?")) return;
-    try {
-      const { error } = await supabase
-        .from("forms")
-        .update({ status: "Deleted" })
-        .eq("id", id);
+  //const handleDeleteForm = async (id) => {
+    //if (!window.confirm("Are you sure you want to delete this form?")) return;
+    //try {
+      //const { error } = await supabase
+        //.from("forms")
+        //.update({ status: "Deleted" })
+        //.eq("id", id);
 
-      if (error) throw error;
-      setForms(forms.map(f => (f.id === id ? { ...f, status: "Deleted" } : f)));
-      setScreen("dashboard");
-    } catch (err) {
-      console.error("Error deleting form:", err);
-      setErrorMsg("Failed to delete form.");
-    }
-  };
+      //if (error) throw error;
+      //setForms(forms.map(f => (f.id === id ? { ...f, status: "Deleted" } : f)));
+      //setScreen("dashboard");
+    //} catch (err) {
+      //console.error("Error deleting form:", err);
+     // setErrorMsg("Failed to delete form.");
+   // }
+ // };
 
   // ------------------- ROUTING -------------------
-  const NurseForm = () => {
-    const { token } = useParams();
-    const [form, setForm] = useState(null);
+ // const NurseForm = () => {
+   // const { token } = useParams();
+    //const [form, setForm] = useState(null);
 
-    useEffect(() => {
-      const fetchForm = async () => {
-        const { data, error } = await supabase
-          .from("forms")
-          .select("*")
-          .eq("share_link", token)
-          .eq("link_active", true)
-          .single();
+    //useEffect(() => {
+      //const fetchForm = async () => {
+        //const { data, error } = await supabase
+          //.from("forms")
+          //.select("*")
+          //.eq("share_link", token)
+          //.eq("link_active", true)
+          //.single();
 
-        if (error || !data) {
-          alert("Link expired or invalid");
-          return;
-        }
-        setForm(data);
-        setCurrentForm(data);
-        setScreen("nurseForm");
-      };
-      fetchForm();
-    }, [token]);
+        //if (error || !data) {
+          //alert("Link expired or invalid");
+          //return;
+        //}
+        //setForm(data);
+        //setCurrentForm(data);
+        //setScreen("nurseForm");
+      //};
+      //fetchForm();
+    //}, [token]);
 
-    return null; // rendering handled in nurseForm screen
-  };
+    //return null; // rendering handled in nurseForm screen
+  //};
 
   // ------------------- SCREENS -------------------
   if (loading) return <div style={{ ...styles.container, ...styles.center }}>Loading...</div>;
@@ -524,7 +554,7 @@ if (!user || screen === "login") {
   <input
     placeholder="🔍 Search patient, nurse, status, date..."
     style={{
-      width: "100%",
+      width: "95%",
       padding: 10,
       borderRadius: 8,
       border: "1px solid #ccc",
@@ -664,7 +694,7 @@ if (screen === "view") {
     }}
     onClick={downloadPDF}
   >
-    📄 Download PDF
+    📄 Download
   </button>
 
   {/** Edit Form **/}
@@ -684,7 +714,7 @@ if (screen === "view") {
     }}
     onClick={() => navigate(`/AdminEdit/${currentForm.id}`)}
   >
-    ✏️ Edit Form
+    ✏️ Edit
   </button>
 
   {/** Delete Form **/}
@@ -704,7 +734,7 @@ if (screen === "view") {
     }}
     onClick={() => setShowDeleteConfirm(true)}
   >
-    🗑 Delete Form
+    🗑 Delete
   </button>
 </div>
 
@@ -731,7 +761,7 @@ if (screen === "view") {
           <p>
             Link:{" "}
             <a
-              href={`http://localhost:3000/nurse-form/${currentForm.share_link}`}
+            href={`${window.location.origin}/nurse-form/${currentForm.share_link}`}
               target="_blank"
               rel="noreferrer"
             >
@@ -759,34 +789,34 @@ if (screen === "view") {
        <div style={{ display: "flex", gap: 20, marginBottom: 10, alignItems: "center" }}>
   <div>
     <strong>Date: </strong>
-    <span>{currentForm.date || "____/____/____"}</span>
+    <span>{currentForm.date || "___/___/___"}</span>
   </div>
 
   <div>
     <strong>Time: </strong>
-    <span>{currentForm.visit_time || "____:____"}</span>
+    <span>{currentForm.visit_time || "___:___"}</span>
   </div>
 </div>
  {/* chronics*/}
 <div style={{ display: "flex", gap: 20, marginBottom: 10, alignItems: "center" }}>
   <div>
     <span>BP: </span>
-    <span>{currentForm.bp || "___/___"} mmHg</span>
+    <span>{currentForm.bp || "__/__"} mmHg</span>
   </div>
 
   <div>
     <span>Pulse: </span>
-    <span >{currentForm.pulse || "___"} bpm</span>
+    <span >{currentForm.pulse || "__"} bpm</span>
   </div>
 
   <div>
     <span>Temp: </span>
-    <span>{currentForm.temp || "___"}°C</span>
+    <span>{currentForm.temp || "__"}°C</span>
   </div>
 
   <div>
     <span>SpO₂: </span>
-    <span>{currentForm.spo2 || "___"}%</span>
+    <span>{currentForm.spo2 || "__"}%</span>
   </div>
 </div>
 
@@ -845,7 +875,7 @@ if (screen === "view") {
   <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
     IV Therapy:
     <span style={{  minWidth: 120 }}>
-      {currentForm.iv_therapy || "____________"}
+      {currentForm.iv_therapy || "________"}
     </span>
   </div>
 </div>
@@ -855,22 +885,20 @@ if (screen === "view") {
 {/* ADMINISTRATION RECORD */}
 <h4 style={{marginTop: 30}}>Administration Record</h4>
 <div style={{ display: "flex", gap: 30, marginBottom: 10, alignItems: "center" }}>
-  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", }}>
     IV Site:
     <span style={{  minWidth: 120 }}>
       {currentForm.iv_site || "____________"}
     </span>
   </div>
 
-  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",}}>
     Cannula:
     <span style={{  minWidth: 120 }}>
       {currentForm.cannula || "____________"}
     </span>
   </div>
 </div>
-
-
         <hr />
 
         {/* DRUG */}
@@ -879,33 +907,51 @@ if (screen === "view") {
     <div style={{ display: "flex", gap: 30, marginBottom: 10, alignItems: "center" }}>
   <div>
     <strong>Start: </strong>
-    <span>{currentForm.start_time|| "____:____"}</span>
+    <span>{currentForm.start_time|| "___:___"}</span>
   </div>
 
   <div>
     <strong>End: </strong>
-    <span>{currentForm.end_time|| "____:____"}</span>
+    <span>{currentForm.end_time|| "___:___"}</span>
   </div>
 </div>
         
 
      {/* REACTION */}
+<div style={{ marginTop: 10 }}>
+  {/* Reaction Options */}
+  <div style={{ display: "flex", gap: 30, alignItems: "center" }}>
+    <span>Reaction:</span>
 
-<p style={{ display: "flex", alignItems: "center", gap: 20 }}>
-  <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-    <span>Reaction:   {currentForm.reaction === "None" ? "☑" : "☐"}</span>
-    <span>None</span>
-  </span>
-
-  <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-    <span>{currentForm.reaction === "Yes" ? "☑" : "☐"}</span>
-    <span>Yes:</span>
-    <span style={{minWidth: 150 }}>
-      {currentForm.reaction === "Yes" ? currentForm.reaction_desc || "__________" : ""}
+    <span>
+      {currentForm.reaction === "None" ? "☑" : "☐"} None
     </span>
-  </span>
-</p>
 
+    <span>
+      {currentForm.reaction === "Yes" ? "☑" : "☐"} Yes
+    </span>
+  </div>
+
+  {/* Reaction Details (only if Yes) */}
+  {currentForm.reaction === "Yes" && (
+    <div style={{ marginTop: 10 }}>
+      <div>
+        Assessment:{" "}
+        {currentForm.reaction_assessment || "______________________"}
+      </div>
+
+      <div>
+        Diagnosis:{" "}
+        {currentForm.reaction_desc || "______________________"}
+      </div>
+
+      <div>
+        Treatment:{" "}
+        {currentForm.reaction_treatment || "______________________"}
+      </div>
+    </div>
+  )}
+</div>
 
      
 
