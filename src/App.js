@@ -787,7 +787,7 @@ if (screen === "view") {
         <hr />
 
         {/* CLINICAL ASSESSMENT */}
-        <h4>Clinical Assessment</h4>
+        <h4 style={{marginTop: 5}}>Clinical Assessment</h4>
 
          {/* DATE AND TIME */}
        <div style={{ display: "flex", gap: 20, marginBottom: 10, alignItems: "center" }}>
@@ -845,7 +845,7 @@ if (screen === "view") {
         <hr />
 
         {/* HISTORY */}
-        <h4>Medical History</h4>
+        <h4 style={{marginTop: 5}}>Medical History</h4>
 <p style={{ display: "flex", alignItems: "center", gap: 10 }}>
   <span>{currentForm.allergies ? "☑" : "☐"}</span>
   <span>Allergies</span>
@@ -866,7 +866,7 @@ if (screen === "view") {
         <hr />
 
         {/* DIAGNOSIS */}
-        <h4>Diagnosis / Indication</h4>
+        <h4 style={{marginTop: 5}}>Diagnosis / Indication</h4>
      
         <p>ICD-10: {currentForm.icd10}</p>
 
@@ -875,7 +875,7 @@ if (screen === "view") {
         {/* TREATMENT */}
         <h4 >Treatment</h4>
 
-        <div style={{ display: "flex", gap: 30, marginBottom: 10, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 30, marginBottom: 5, alignItems: "center" }}>
   <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
     IV Therapy:
     <span style={{  minWidth: 120 }}>
