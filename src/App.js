@@ -425,38 +425,39 @@ const templateParams = {
   // ------------------- SCREENS -------------------
   if (loading) return <div style={{ ...styles.container, ...styles.center }}>Loading...</div>;
   
-if (!user || screen === "login") {
-  return (
+{(!user || screen === "login") && (
+  <div
+    style={{
+      height: "100vh",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      background: "#f4f6f8",
+    }}
+  >
     <div
       style={{
-        height: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        background: "#f4f6f8",
+        width: 350,
+        padding: 30,
+        background: "white",
+        borderRadius: 12,
+        boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+        textAlign: "center",
       }}
     >
-      <div
-        style={{
-          width: 350,
-          padding: 30,
-          background: "white",
-          borderRadius: 12,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-          textAlign: "center",
+      <img src={logo} alt="logo" style={{ height: 70, marginBottom: 15 }} />
+      <h2 style={{ marginBottom: 20 }}>Admin Login</h2>
+
+      {loginError && <p style={{ color: "red" }}>{loginError}</p>}
+
+      {/* ✅ Wrap inputs in a form */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleLogin();
         }}
+        style={{ display: "flex", flexDirection: "column", gap: 12 }}
       >
-        {/* ✅ LOGO */}
-        <img
-          src={logo}
-          alt="logo"
-          style={{ height: 70, marginBottom: 15 }}
-        />
-
-        <h2 style={{ marginBottom: 20 }}>Admin Login</h2>
-
-        {loginError && <p style={{ color: "red" }}>{loginError}</p>}
-
         <input
           placeholder="Username"
           style={styles.formInput}
@@ -464,6 +465,7 @@ if (!user || screen === "login") {
           onChange={(e) =>
             setLoginData({ ...loginData, username: e.target.value })
           }
+          required
         />
 
         <input
@@ -474,15 +476,16 @@ if (!user || screen === "login") {
           onChange={(e) =>
             setLoginData({ ...loginData, password: e.target.value })
           }
+          required
         />
 
-        <button style={{ ...styles.primaryBtn, width: "100%" }} onClick={handleLogin}>
+        <button type="submit" style={{ ...styles.primaryBtn, width: "100%" }}>
           Login
         </button>
-      </div>
+      </form>
     </div>
-  );
-}
+  </div>
+)}
   if (screen === "dashboard") {
     const filteredForms = forms.filter((f) => {
   const term = search.toLowerCase();
