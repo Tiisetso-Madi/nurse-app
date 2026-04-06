@@ -7,7 +7,7 @@ import logo from "./logo.png";
 //import html2canvas from "html2canvas";
 //import jsPDF from "jspdf";
 import SignatureCanvas from 'react-signature-canvas';
-import react from "react";
+
 
 export default function NurseFormPage() {
   const { token } = useParams();
@@ -343,11 +343,23 @@ const { error } = await supabase
         {/* DRUG ADMIN */}
         <div style={styles.section}>
           <h3>Drug Dose Batch No Expiry</h3>
+
+           <input placeholder="Dose" style={styles.formInput}
+            onChange={e => setResponse({ ...response, dose: e.target.value })}
+          />
+
+           <input placeholder="Batch No"  style={styles.formInput}
+            onChange={e => setResponse({ ...response, batchNo: e.target.value })}
+          />
+
+           <input placeholder="Expiry Date"  style={styles.formInput}
+            onChange={e => setResponse({ ...response, expiry: e.target.value })}
+          />
          
-          <input type="time" style={styles.formInput}
+          <input placeholder="Start Time" type="time" style={styles.formInput}
             onChange={e => setResponse({ ...response, startTime: e.target.value })}
           />
-          <input type="time" style={styles.formInput}
+          <input placeholder="End Time" type="time" style={styles.formInput}
             onChange={e => setResponse({ ...response, endTime: e.target.value })}
           />
         </div>
