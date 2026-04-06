@@ -345,7 +345,7 @@ const handleSendForm = async () => {
     const link = `https://nurseformdev.netlify.app/nurse-form/${linkToken}`;
     console.log(`Send this link to nurse via WhatsApp: ${link}`);
 
-/*try {
+try {
   const response = await emailjs.send(
     "service_5y7yfvi",
     "template_2tuj162",
@@ -363,7 +363,7 @@ const handleSendForm = async () => {
 
 } catch (err) {
   console.log("Email sent status:", response.status);
-}*/
+}
   } catch (err) {
     console.error("Error sending form:", err);
     setErrorMsg("Failed to send form. Check Supabase policies or network.");
