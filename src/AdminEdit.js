@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 import logo from "./logo.png";
 import SignatureCanvas from 'react-signature-canvas';
-import react from "react";
+;
 //import SignatureCanvas from "react-signature-canvas";
 
 export default function NurseFormPage() {
@@ -379,7 +379,20 @@ const handleBack = () => {
         {/* DRUG ADMIN */}
         <div style={styles.section}>
           <h3>Drug Dose Batch No Expiry</h3>
-         
+        
+
+           <input placeholder="Dose" value={response.dose} style={styles.formInput}
+            onChange={e => setResponse({ ...response, dose: e.target.value })}
+          />
+
+           <input placeholder="Batch No" value={response.batchNo}  style={styles.formInput}
+            onChange={e => setResponse({ ...response, batchNo: e.target.value })}
+          />
+
+           <input placeholder="Expiry Date" value={response.expiry}  style={styles.formInput}
+            onChange={e => setResponse({ ...response, expiry: e.target.value })}
+          />
+
           <input type="time" value={response.startTime} style={styles.formInput}
             onChange={e => setResponse({ ...response, startTime: e.target.value })}
           />
