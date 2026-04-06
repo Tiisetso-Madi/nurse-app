@@ -873,7 +873,7 @@ if (screen === "view") {
         <hr />
 
         {/* TREATMENT */}
-        <h4 >Treatment</h4>
+        <h4 style={{marginTop: 5}}>Treatment</h4>
 
         <div style={{ display: "flex", gap: 30, marginBottom: 5, alignItems: "center" }}>
   <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
