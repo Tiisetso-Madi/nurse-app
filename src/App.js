@@ -7,8 +7,6 @@ import jsPDF from "jspdf";
 
 import html2canvas from "html2canvas";
 import { useNavigate } from "react-router-dom";
-import react from "react";
-import { REALTIME_CHANNEL_STATES } from "@supabase/supabase-js";
 import emailjs from "@emailjs/browser";
 
 
@@ -19,7 +17,7 @@ export default function App() {
   const [screen, setScreen] = useState("dashboard");
   const [forms, setForms] = useState([]);
   const [currentForm, setCurrentForm] = useState(null);
-  const [response, setResponse] = useState({});
+const [response, setResponse] = useState({});
   // Add these hooks at the top
 const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -239,27 +237,27 @@ const [loginError, setLoginError] = useState("");
 
   // ------------------- ACTIONS -------------------
   
-<form onSubmit={handleLogin}>
-  <input
-    type="text"
-    placeholder="Username"
-    value={loginData.username}
-    onChange={(e) =>
-      setLoginData({ ...loginData, username: e.target.value })
-    }
-    style={{ width: "100%", padding: "10px", marginBottom: "12px" }}
-  />
-  <input
-    type="password"
-    placeholder="Password"
-    value={loginData.password}
-    onChange={(e) =>
-      setLoginData({ ...loginData, password: e.target.value })
-    }
-    style={{ width: "100%", padding: "10px", marginBottom: "12px" }}
-  />
-  <button type="submit">Login</button>
-</form>
+const handleLogin = async () => {
+  setLoginError("");
+  const { username, password } = loginData;
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: username, // you're using username as email
+    password: password,
+  });
+
+  if (error) {
+    setLoginError(error.message);
+    return;
+  }
+
+  const user = data.user;
+
+  setUser(user);
+  localStorage.setItem("user", JSON.stringify(user));
+  setScreen("dashboard");
+  setLoginData({ username: "", password: "" });
+};
 
 const handleLogout = () => {
   setUser(null);
@@ -344,29 +342,28 @@ const handleSendForm = async () => {
     setFormData({ patientName: "", address: "", date: "", notes: "", nurse: { name: "", contact: "" } });
     setResponse({ completed: "", notes: "", temp: "", bp: "" });
 
-    const link = `https://localhost:3000/nurse-form/${linkToken}`;
+    const link = `https://nurseformdev.netlify.app/nurse-form/${linkToken}`;
     console.log(`Send this link to nurse via WhatsApp: ${link}`);
 
-
-
-const templateParams = {
-      patient_name: formData.patientName,
+/*try {
+  const response = await emailjs.send(
+    "service_5y7yfvi",
+    "template_2tuj162",
+    {
+      email: formData.nurse?.contact?.trim(),
+      name: formData.patientName.trim(),
       form_link: link,
-      nurse_email: formData.nurse.contact,
-    };
+    },
+    "aQSTcBp6a7DnSBIwU"
+  );
 
-    await emailjs.send(
-      "service_5y7yfvi",    // replace with your EmailJS service ID
-      "template_2tuj162",   // replace with your EmailJS template ID
-      {
-        email:  formData.nurse?.contact?.trim(),    // this must not be empty
-        name:  formData.patientName.trim(),      // optional, depends on your template
-        form_link: link,       // the link to the nurse form
-      },
-      "aQSTcBp6a7DnSBIwU"        // replace with your EmailJS user ID
-    );
+  if (response.status === 200) {
+    console.log("Email sent status:", response.status);
+  }
 
-
+} catch (err) {
+  console.log("Email sent status:", response.status);
+}*/
   } catch (err) {
     console.error("Error sending form:", err);
     setErrorMsg("Failed to send form. Check Supabase policies or network.");
@@ -425,39 +422,38 @@ const templateParams = {
   // ------------------- SCREENS -------------------
   if (loading) return <div style={{ ...styles.container, ...styles.center }}>Loading...</div>;
   
-{(!user || screen === "login") && (
-  <div
-    style={{
-      height: "100vh",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      background: "#f4f6f8",
-    }}
-  >
+if (!user || screen === "login") {
+  return (
     <div
       style={{
-        width: 350,
-        padding: 30,
-        background: "white",
-        borderRadius: 12,
-        boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-        textAlign: "center",
+        height: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        background: "#f4f6f8",
       }}
     >
-      <img src={logo} alt="logo" style={{ height: 70, marginBottom: 15 }} />
-      <h2 style={{ marginBottom: 20 }}>Admin Login</h2>
-
-      {loginError && <p style={{ color: "red" }}>{loginError}</p>}
-
-      {/* ✅ Wrap inputs in a form */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleLogin();
+      <div
+        style={{
+          width: 350,
+          padding: 30,
+          background: "white",
+          borderRadius: 12,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+          textAlign: "center",
         }}
-        style={{ display: "flex", flexDirection: "column", gap: 12 }}
       >
+        {/* ✅ LOGO */}
+        <img
+          src={logo}
+          alt="logo"
+          style={{ height: 70, marginBottom: 15 }}
+        />
+
+        <h2 style={{ marginBottom: 20 }}>Admin Login</h2>
+
+        {loginError && <p style={{ color: "red" }}>{loginError}</p>}
+
         <input
           placeholder="Username"
           style={styles.formInput}
@@ -465,7 +461,6 @@ const templateParams = {
           onChange={(e) =>
             setLoginData({ ...loginData, username: e.target.value })
           }
-          required
         />
 
         <input
@@ -476,16 +471,15 @@ const templateParams = {
           onChange={(e) =>
             setLoginData({ ...loginData, password: e.target.value })
           }
-          required
         />
 
-        <button type="submit" style={{ ...styles.primaryBtn, width: "100%" }}>
+        <button style={{ ...styles.primaryBtn, width: "100%" }} onClick={handleLogin}>
           Login
         </button>
-      </form>
+      </div>
     </div>
-  </div>
-)}
+  );
+}
   if (screen === "dashboard") {
     const filteredForms = forms.filter((f) => {
   const term = search.toLowerCase();
@@ -764,7 +758,7 @@ if (screen === "view") {
     </div>
   </div>
       {/* PDF CONTENT START */}
-      <div id="pdf-content" style={{ background: "transparent", padding: 0, lineHeight: 1.3,   fontSize: 9}}>
+      <div id="pdf-content" style={{ background: "transparent", padding: 0, lineHeight: 1.3,   fontSize: 8}}>
 
 
          {currentForm.share_link && currentForm.link_active && (
@@ -893,7 +887,7 @@ if (screen === "view") {
         <hr />
 
 {/* ADMINISTRATION RECORD */}
-<h4 style={{marginTop: 30}}>Administration Record</h4>
+<h4 style={{marginTop: 5}}>Administration Record</h4>
 <div style={{ display: "flex", gap: 30, marginBottom: 10, alignItems: "center" }}>
   <div style={{ display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", }}>
     IV Site:
@@ -912,9 +906,23 @@ if (screen === "view") {
         <hr />
 
         {/* DRUG */}
-        <h4>Drug Dose Batch No Expiry</h4>
-  
+
+
+
+      <h4 style={{marginTop: 20}}>Drug Details</h4>
+        <div style={{ display: "flex", gap: 10, marginBottom: 10, alignItems: "center" }}>
+        <strong>Drug Dose:</strong>
+        <span>{currentForm.dose|| "_________________"}</span>
+        <strong>Batch No:</strong>
+        <span>{currentForm.batch_no|| "___________________"}</span> 
+        <strong>Expiry Date:</strong>
+        <span>{currentForm.expiry|| "___________________"}</span>
+      </div>
+      
     <div style={{ display: "flex", gap: 30, marginBottom: 10, alignItems: "center" }}>
+
+
+
   <div>
     <strong>Start: </strong>
     <span>{currentForm.start_time|| "___:___"}</span>
@@ -930,7 +938,7 @@ if (screen === "view") {
      {/* REACTION */}
 <div style={{ marginTop: 10 }}>
   {/* Reaction Options */}
-  <div style={{ display: "flex", gap: 30, alignItems: "center" }}>
+  <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
     <span>Reaction:</span>
 
     <span>
@@ -985,7 +993,7 @@ if (screen === "view") {
       <img
         src={currentForm.patient_signature}
         alt="patient signature"
-        style={{ height: 40, borderBottom: "1px solid #000" }}
+        style={{ height: 35, borderBottom: "1px solid #000" }}
       />
     ) : (
       <span style={{ display: "inline-block", borderBottom: "1px solid #000", minWidth: 200 }}>
@@ -997,7 +1005,7 @@ if (screen === "view") {
 
 
 {/* Practitioner Signature */}
-<p style={{ marginTop: 30 }}>
+<p style={{ marginTop: 13 }}>
     <strong>Practitioner:</strong> {currentForm.nurse_name}
   </p>
 <div style={{ marginTop: 0 }}>
@@ -1007,7 +1015,7 @@ if (screen === "view") {
       <img
         src={currentForm.practitioner_signature}
         alt="practitioner signature"
-        style={{ height: 40, borderBottom: "1px solid #000" }}
+        style={{ height: 35, borderBottom: "1px solid #000" }}
       />
     ) : (
       <span style={{ display: "inline-block", borderBottom: "1px solid #000", minWidth: 200 }}>
