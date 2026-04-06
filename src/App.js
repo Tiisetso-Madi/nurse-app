@@ -239,20 +239,27 @@ const [loginError, setLoginError] = useState("");
 
   // ------------------- ACTIONS -------------------
   
- const handleLogin = () => {
-  setLoginError("");
-  const { username, password } = loginData;
-
-  if (username === "admin" && password === "password123") {
-    const loggedInUser = { username };
-    setUser(loggedInUser);
-    localStorage.setItem("user", JSON.stringify(loggedInUser)); // SAVE
-    setScreen("dashboard");
-    setLoginData({ username: "", password: "" });
-  } else {
-    setLoginError("Invalid username or password");
-  }
-};
+<form onSubmit={handleLogin}>
+  <input
+    type="text"
+    placeholder="Username"
+    value={loginData.username}
+    onChange={(e) =>
+      setLoginData({ ...loginData, username: e.target.value })
+    }
+    style={{ width: "100%", padding: "10px", marginBottom: "12px" }}
+  />
+  <input
+    type="password"
+    placeholder="Password"
+    value={loginData.password}
+    onChange={(e) =>
+      setLoginData({ ...loginData, password: e.target.value })
+    }
+    style={{ width: "100%", padding: "10px", marginBottom: "12px" }}
+  />
+  <button type="submit">Login</button>
+</form>
 
 const handleLogout = () => {
   setUser(null);
