@@ -342,7 +342,7 @@ const handleSendForm = async () => {
     setFormData({ patientName: "", address: "", date: "", notes: "", nurse: { name: "", contact: "" } });
     setResponse({ completed: "", notes: "", temp: "", bp: "" });
 
-    const link = `https://nurseformdev.netlify.app/nurse-form/${linkToken}`;
+    const link = `https://nachinurseform.netlify.app/nurse-form/${linkToken}`;
     console.log(`Send this link to nurse via WhatsApp: ${link}`);
 
 try {
